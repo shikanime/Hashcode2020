@@ -18,7 +18,7 @@ defmodule Data do
 
   defp read_input do
     read_list() |> Enum.map(&String.to_integer/1)
-end
+  end
 
   defp read_list do
     IO.read(:line) |> String.trim() |> String.split(" ")
@@ -31,53 +31,66 @@ defmodule Hashcode do
   def main do
     # Read the header
     {n_books, n_libraries, budget} = Data.read_header()
-    _book_ids = Data.read_books(n_books)
+    _order = Data.read_books(n_books)
     libraries = Data.read_libraries(n_libraries)
 
-    # Read all libraries stock
     Logger.info(["Number of books: ", n_books |> to_string()])
     Logger.info(["Number of libraries: ", n_libraries |> to_string()])
     Logger.info(["Budget: ", budget |> to_string()])
 
     libraries = rank_libraries(libraries, budget)
-    offset_days = signup_libraries(libraries, budget)
+    {signup_days, libraries} = select_libraries(libraries, budget)
 
     IO.inspect(libraries)
-    IO.inspect(offset_days)
+    Logger.info(["Starting days: ", signup_days |> to_string()])
 
-    # libraries = select_libraries(libraries, offset_days)
-    # invest(libraries, budget)
+    selected_books = invest_libraries(libraries, budget - signup_days)
+
+    IO.inspect(selected_books)
   end
 
   defp rank_libraries(libraries, budget) do
     Enum.sort_by(libraries, &score(&1, budget))
   end
 
-  defp signup_libraries(libraries, budget) do
-    Enum.reduce_while(libraries, budget, fn {_, _, _, signup_days, _}, acc ->
-      case acc - signup_days do
-        rest when rest > 0 -> {:cont, rest}
-        _ -> {:halt, budget}
-      end
+  defp score({_, _, n_books, signup_days, n_concurent_book}, budget) do
+    budget - (n_books  / n_concurent_book) + signup_days
+  end
+
+  defp select_libraries(libraries, budget, offset \\ 0, res \\ [])
+
+  defp select_libraries([library | rest], budget, offset, res) do
+    {_, _, _, signup_days, _} = library
+
+    case offset + signup_days do
+      next when next <= budget ->
+          select_libraries(rest, budget, next, [library | res])
+
+        _ ->
+        {offset, res}
+    end
+  end
+
+  defp select_libraries([], _, offset, res) do
+    {offset, res}
+  end
+
+  defp invest_libraries(libraries, days) do
+    Enum.map(libraries, fn {n, books, n_books, _, n_concurent_book} ->
+      process_books = floor((n_books - days) * n_concurent_book)
+      {n, Enum.take(books, process_books)}
     end)
   end
 
-  # defp select_libraries(libraries, days) do
-  #   select_libraries(libraries)
-  # end
+  # defp score_book(libraries, order) do
+  #   Enum.sort_by(libraries, fn library ->
+  #     {score, _} =
+  #       order
+  #       |> Enum.with_index()
+  #       |> Enum.find(fn {_, index} -> library == index end)
 
-  # defp invest(libraries, 0, res) do
-  #   res
+  #     score
+  #   end, :desc)
   # end
-
-  # defp invest([{n, books, n_books, signup_days, n_concurent_book} | rest], budget) do
-  #   rest_days = budget - signup_days
-  #   process_books = floor((n_books - days) / n_concurent_book)
-  #   invest(libraries, days, books |> Enum.take(process_books))
-  # end
-
-  defp score({n, _, n_books, signup_days, n_concurent_book}, budget) do
-    budget - (n_books  / n_concurent_book) + signup_days
-  end
 end
 
