@@ -1,52 +1,64 @@
 defmodule Data do
-  def read_header do
-    [n_books, n_libraries, n_days] = read_input() |> Enum.take(3)
+  def read_header(device) do
+    [n_books, n_libraries, n_days] = read_input(device) |> Enum.take(3)
     {n_books, n_libraries, n_days}
   end
 
-  def read_books(n) do
-    read_input() |> Enum.take(n)
+  def read_books(device, n) do
+    read_input(device) |> Enum.take(n)
   end
 
-  def read_libraries(n) do
+  def read_libraries(device, n) do
     Enum.map(0..(n - 1), fn n ->
-      [n_books, signup_days, n_concurent_book] = read_input()
-      books = read_input() |> Enum.take(n_books)
+      [n_books, signup_days, n_concurent_book] = read_input(device)
+      books = read_input(device) |> Enum.take(n_books)
       {n, books, n_books, signup_days, n_concurent_book}
     end)
   end
 
-  defp read_input do
-    read_list() |> Enum.map(&String.to_integer/1)
+  defp read_input(device) do
+    read_list(device) |> Enum.map(&String.to_integer/1)
   end
 
-  defp read_list do
-    IO.read(:line) |> String.trim() |> String.split(" ")
+  defp read_list(device) do
+    IO.read(device, :line) |> String.trim() |> String.split(" ")
+  end
+
+  def format_libraries(libraries) do
+    libraries
+    |> Enum.map(fn {n, books} ->
+      [
+        [n |> to_string(), length(books) |> to_string()] |> Enum.intersperse(" "),
+        books |> Enum.map(&to_string/1) |> Enum.intersperse(" ")
+      ]
+      |> Enum.intersperse("\n")
+    end)
+    |> Enum.reverse()
+    |> Enum.intersperse("\n")
   end
 end
 
 defmodule Hashcode do
-  require Logger
-
   def main do
+    {:ok, device} = File.open("./data/f_libraries_of_the_world.txt")
     # Read the header
-    {n_books, n_libraries, budget} = Data.read_header()
-    _order = Data.read_books(n_books)
-    libraries = Data.read_libraries(n_libraries)
+    {n_books, n_libraries, budget} = Data.read_header(device)
+    _order = Data.read_books(device, n_books)
+    libraries = Data.read_libraries(device, n_libraries)
 
-    Logger.info(["Number of books: ", n_books |> to_string()])
-    Logger.info(["Number of libraries: ", n_libraries |> to_string()])
-    Logger.info(["Budget: ", budget |> to_string()])
+    IO.puts(["Number of books: ", n_books |> to_string()])
+    IO.puts(["Number of libraries: ", n_libraries |> to_string()])
+    IO.puts(["Budget: ", budget |> to_string()])
 
     libraries = rank_libraries(libraries, budget)
     {signup_days, libraries} = select_libraries(libraries, budget)
 
-    IO.inspect(libraries)
-    Logger.info(["Starting days: ", signup_days |> to_string()])
+    IO.puts(["Starting days: ", signup_days |> to_string()])
 
-    selected_books = invest_libraries(libraries, budget - signup_days)
+    libraries = invest_libraries(libraries, budget - signup_days)
 
-    IO.inspect(selected_books)
+    IO.puts(libraries |> length() |> to_string())
+    IO.puts(libraries |> Data.format_libraries())
   end
 
   defp rank_libraries(libraries, budget) do
@@ -64,9 +76,9 @@ defmodule Hashcode do
 
     case offset + signup_days do
       next when next <= budget ->
-          select_libraries(rest, budget, next, [library | res])
+        select_libraries(rest, budget, next, [library | res])
 
-        _ ->
+      _ ->
         {offset, res}
     end
   end
@@ -94,3 +106,4 @@ defmodule Hashcode do
   # end
 end
 
+Hashcode.main
