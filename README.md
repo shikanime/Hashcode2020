@@ -1,6 +1,6 @@
 # Hashcode
 
-**TODO: Add description**
+Disty code written for the competition.
 
 ## Installation
 
