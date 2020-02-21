@@ -39,33 +39,38 @@ defmodule Data do
 end
 
 defmodule Hashcode do
-  def main do
-    {:ok, device} = File.open("./data/f_libraries_of_the_world.txt")
-    # Read the header
+  require Logger
+
+  def solve(filename) do
+    {:ok, device} = File.open("./data/#{filename}", [:utf8])
     {n_books, n_libraries, budget} = Data.read_header(device)
     _order = Data.read_books(device, n_books)
     libraries = Data.read_libraries(device, n_libraries)
+    File.close(device)
 
-    IO.puts(["Number of books: ", n_books |> to_string()])
-    IO.puts(["Number of libraries: ", n_libraries |> to_string()])
-    IO.puts(["Budget: ", budget |> to_string()])
+    Logger.debug(["Number of books: ", n_books |> to_string()])
+    Logger.debug(["Number of libraries: ", n_libraries |> to_string()])
+    Logger.debug(["Budget: ", budget |> to_string()])
 
     libraries = rank_libraries(libraries, budget)
     {signup_days, libraries} = select_libraries(libraries, budget)
 
-    IO.puts(["Starting days: ", signup_days |> to_string()])
+    Logger.debug(["Starting days: ", signup_days |> to_string()])
 
     libraries = invest_libraries(libraries, budget - signup_days)
 
-    IO.puts(libraries |> length() |> to_string())
-    IO.puts(libraries |> Data.format_libraries())
+    File.open("./output/#{filename}", [:utf8, :write], fn out ->
+      IO.puts(out, libraries |> length() |> to_string())
+      IO.puts(out, libraries |> Data.format_libraries())
+      out
+    end)
   end
 
   defp rank_libraries(libraries, budget) do
-    Enum.sort_by(libraries, &score(&1, budget))
+    Enum.sort_by(libraries, &score_library(&1, budget))
   end
 
-  defp score({_, _, n_books, signup_days, n_concurent_book}, budget) do
+  defp score_library({_, _, n_books, signup_days, n_concurent_book}, budget) do
     budget - (n_books  / n_concurent_book) + signup_days
   end
 
@@ -105,5 +110,3 @@ defmodule Hashcode do
   #   end, :desc)
   # end
 end
-
-Hashcode.main
